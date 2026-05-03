@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Convertisseur EUR ↔ DZD Pro</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #080b12;
+      --surface: #0f1420;
+      --surface2: #161c2d;
+      --surface3: #1d2438;
+      --border: rgba(255,255,255,0.07);
+      --border2: rgba(255,255,255,0.12);
+      --accent: #00d26a;
+      --accent-dim: rgba(0,210,106,0.12);
+      --accent-glow: rgba(0,210,106,0.25);
+      --gold: #ffd700;
+      --gold-dim: rgba(255,215,0,0.08);
+      --gold-border: rgba(255,215,0,0.2);
+      --text: #f0eff8;
+      --muted: rgba(255,255,255,0.42);
+      --muted2: rgba(255,255,255,0.22);
+      --danger: #ff6b6b;
+      --blue: #5b9cf6;
+      --radius-xl: 28px;
+      --radius-lg: 20px;
+      --radius-md: 14px;
+      --radius-sm: 10px;
+      --shadow: 0 30px 90px rgba(0,0,0,0.5);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { min-height: 100%; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Animated grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,210,106,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,210,106,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .page {
+      position: relative;
+      min-height: 100vh;
+      display: grid;
+      place-items: start center;
+      padding: 36px 16px 80px;
+      z-index: 1;
+    }
+
+    .blob {
+      position: fixed;
+      border-radius: 999px;
+      filter: blur(80px);
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.6;
+    }
+    .blob-a { width: 400px; height: 400px; top: -100px; left: -80px; background: rgba(0,210,106,0.18); animation: floatA 10s ease-in-out infinite; }
+    .blob-b { width: 440px; height: 440px; right: -100px; bottom: -100px; background: rgba(255,180,0,0.13); animation: floatB 13s ease-in-out infinite; }
+    .blob-c { width: 280px; height: 280px; top: 50%; left: 50%; transform: translate(-50%,-50%); background: rgba(91,156,246,0.07); animation: floatA 8s ease-in-out infinite reverse; }
+
+    .layout {
+      width: min(100%, 900px);
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 16px;
+      position: relative;
+      z-index: 1;
+    }
+
+    @media (max-width: 820px) { .layout { grid-template-columns: 1fr; } }
+
+    /* CARD */
+    .card {
+      background: rgba(15,20,32,0.85);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-xl);
+      backdrop-filter: blur(24px);
+      box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,0.06);
+      padding: 28px;
+      animation: fadeUp 0.65s cubic-bezier(.16,1,.3,1) both;
+    }
+
+    .card-side {
+      background: rgba(15,20,32,0.75);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      backdrop-filter: blur(24px);
+      box-shadow: var(--shadow);
+      padding: 22px;
+      animation: fadeUp 0.65s 0.1s cubic-bezier(.16,1,.3,1) both;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* HEADER */
+    .header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--accent);
+      margin-bottom: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px var(--accent); animation: pulse 2s ease-in-out infinite; }
+
+    h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(26px, 3.5vw, 40px);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1;
+      background: linear-gradient(135deg, #fff 50%, var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .sub {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.7;
+      max-width: 50ch;
+    }
+
+    /* RATE BOX */
+    .rate-box {
+      min-width: 230px;
+      padding: 14px 16px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--gold-border);
+      background: var(--gold-dim);
+      flex-shrink: 0;
+    }
+    .rate-label { color: var(--muted); font-size: 11px; margin-bottom: 8px; letter-spacing: 0.06em; text-transform: uppercase; }
+    .rate-display, .rate-editor { display: flex; align-items: center; gap: 8px; }
+    .rate-button {
+      border: none; background: transparent; padding: 0;
+      color: var(--gold); font: 700 16px/1.2 'JetBrains Mono', monospace;
+      cursor: pointer; text-align: left; transition: opacity 0.15s;
+    }
+    .rate-button:hover { opacity: 0.8; }
+    .rate-input {
+      width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px; color: #fff; padding: 9px 12px;
+      font-family: 'JetBrains Mono', monospace; font-size: 14px; outline: none;
+      transition: border-color 0.2s;
+    }
+    .rate-input:focus { border-color: var(--accent); }
+    .icon-btn {
+      width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center;
+      border: 1px solid rgba(255,255,255,0.09); background: rgba(255,255,255,0.05);
+      color: #fff; cursor: pointer; font-size: 16px; transition: all 0.15s; flex-shrink: 0;
+    }
+    .icon-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.15); }
+    .icon-btn.confirm { background: var(--accent); color: #000; border-color: transparent; font-weight: 700; }
+    .icon-btn.confirm:hover { background: #00b85e; }
+
+    /* TABS */
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 18px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 6px;
+    }
+    .tab {
+      min-height: 48px; border-radius: 10px; border: 1px solid transparent;
+      background: transparent; color: var(--muted);
+      cursor: pointer; padding: 10px 8px;
+      font-family: 'JetBrains Mono', monospace; font-size: 12px;
+      transition: all 0.2s; line-height: 1.4;
+    }
+    .tab:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+    .tab.active {
+      background: var(--accent-dim); border-color: rgba(0,210,106,0.35);
+      color: #fff;
+    }
+
+    /* BANNER */
+    .banner {
+      margin: 0 0 16px; border: 1px solid rgba(255,150,0,0.2);
+      background: rgba(255,150,0,0.06); color: rgba(255,200,100,0.75);
+      border-radius: 12px; padding: 11px 14px; font-size: 11px; line-height: 1.6;
+    }
+
+    /* INPUT */
+    .input-wrap {
+      display: grid; grid-template-columns: 64px 1fr 52px;
+      border: 1px solid rgba(255,255,255,0.1); border-radius: 16px;
+      overflow: hidden; background: rgba(255,255,255,0.03); margin-bottom: 14px;
+      transition: border-color 0.2s;
+    }
+    .input-wrap:focus-within { border-color: rgba(0,210,106,0.4); }
+    .currency-prefix {
+      display: grid; place-items: center; background: rgba(255,255,255,0.04);
+      color: var(--accent); font-size: 16px; font-weight: 700; min-height: 64px;
+      border-right: 1px solid rgba(255,255,255,0.06);
+    }
+    .amount-input {
+      width: 100%; min-height: 64px; background: transparent; border: none; outline: none;
+      color: #fff; font-size: clamp(20px, 3.5vw, 30px); padding: 0 16px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .amount-input::placeholder { color: rgba(255,255,255,0.15); }
+    .clear-input-btn {
+      display: grid; place-items: center; background: transparent; border: none;
+      color: var(--muted2); cursor: pointer; font-size: 20px; transition: color 0.15s;
+      border-left: 1px solid rgba(255,255,255,0.06);
+    }
+    .clear-input-btn:hover { color: var(--text); }
+
+    /* QUICK BUTTONS */
+    .quick-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    .quick-btn {
+      border-radius: 999px; border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03); color: rgba(255,255,255,0.7);
+      padding: 8px 14px; font-size: 11px; cursor: pointer;
+      font-family: 'JetBrains Mono', monospace; transition: all 0.15s;
+    }
+    .quick-btn:hover { background: var(--accent-dim); border-color: rgba(0,210,106,0.3); color: var(--accent); }
+
+    /* RESULT BOX */
+    .result-box {
+      border-radius: var(--radius-lg); padding: 20px; margin-bottom: 18px;
+      border: 1px solid rgba(0,210,106,0.2);
+      background: linear-gradient(135deg, rgba(0,210,106,0.08), rgba(255,180,0,0.04));
+      position: relative; overflow: hidden;
+    }
+    .result-box::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(circle at 0% 50%, rgba(0,210,106,0.07), transparent 60%);
+      pointer-events: none;
+    }
+    .result-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .result-label { color: var(--muted); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; }
+    .copy-btn {
+      display: flex; align-items: center; gap: 6px; padding: 6px 12px;
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px; color: var(--muted); font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; cursor: pointer; transition: all 0.15s;
+    }
+    .copy-btn:hover { background: var(--accent-dim); border-color: rgba(0,210,106,0.3); color: var(--accent); }
+    .copy-btn.copied { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+    .result-value { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+    .result-number {
+      color: #fff; font-family: 'Syne', sans-serif; font-weight: 800;
+      font-size: clamp(26px, 4.5vw, 42px); line-height: 1; letter-spacing: -0.03em;
+    }
+    .result-unit { color: var(--accent); font-size: 16px; font-weight: 700; }
+    .formula { color: rgba(255,255,255,0.25); font-size: 11px; line-height: 1.7; word-break: break-word; }
+
+    /* RATES TABLE */
+    .rates-table {
+      width: 100%; overflow: hidden; border-radius: var(--radius-md);
+      border: 1px solid var(--border); background: rgba(255,255,255,0.02); margin-bottom: 6px;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 12px 14px; text-align: left; font-size: 11px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    th { color: var(--muted); font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; font-size: 10px; }
+    td { color: #fff; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 700;
+    }
+    .badge-buy { background: rgba(91,156,246,0.15); color: var(--blue); border: 1px solid rgba(91,156,246,0.25); }
+    .badge-mid { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(0,210,106,0.25); }
+    .badge-sell { background: rgba(255,107,107,0.12); color: var(--danger); border: 1px solid rgba(255,107,107,0.22); }
+    .badge-info { background: rgba(255,215,0,0.1); color: var(--gold); border: 1px solid rgba(255,215,0,0.2); }
+
+    .footer-note {
+      text-align: center; color: rgba(255,255,255,0.15); font-size: 11px; margin-top: 16px; line-height: 1.5;
+    }
+
+    /* SIDE PANEL — HISTORY */
+    .side-title {
+      font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .history-clear {
+      background: transparent; border: none; color: var(--muted2); font-size: 11px;
+      cursor: pointer; font-family: 'JetBrains Mono', monospace; transition: color 0.15s;
+    }
+    .history-clear:hover { color: var(--danger); }
+    .history-list { display: flex; flex-direction: column; gap: 8px; }
+    .history-empty { color: var(--muted2); font-size: 12px; text-align: center; padding: 24px 0; }
+    .history-item {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 12px 14px; cursor: pointer;
+      transition: all 0.15s; position: relative; overflow: hidden;
+    }
+    .history-item:hover { border-color: rgba(0,210,106,0.25); background: var(--surface3); }
+    .history-item::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--accent); border-radius: 0 2px 2px 0; opacity: 0.6; }
+    .history-mode { font-size: 10px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .history-conversion { font-size: 12px; font-weight: 700; color: var(--text); }
+    .history-time { font-size: 10px; color: var(--muted2); margin-top: 4px; }
+    .history-copy {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      background: transparent; border: none; color: var(--muted2); cursor: pointer;
+      font-size: 14px; opacity: 0; transition: opacity 0.15s;
+    }
+    .history-item:hover .history-copy { opacity: 1; }
+    .history-copy:hover { color: var(--accent); }
+
+    /* STAT CARDS */
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .stat-card {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 12px;
+    }
+    .stat-label { font-size: 10px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .stat-value { font-size: 14px; font-weight: 700; color: var(--text); }
+    .stat-value.green { color: var(--accent); }
+    .stat-value.gold { color: var(--gold); }
+
+    /* TOAST */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+      background: var(--surface3); border: 1px solid var(--border2);
+      color: var(--text); padding: 12px 20px; border-radius: 99px;
+      font-size: 13px; font-weight: 500; z-index: 100;
+      transition: transform 0.35s cubic-bezier(.16,1,.3,1), opacity 0.35s;
+      opacity: 0; display: flex; align-items: center; gap: 8px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      white-space: nowrap;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+    .toast-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+
+    /* CONVERSION ARROW */
+    .conversion-arrow {
+      text-align: center; color: var(--accent); font-size: 22px; margin: -4px 0;
+      animation: arrowPulse 2s ease-in-out infinite;
+    }
+
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes floatA { 0%,100% { transform: translate(0,0); } 50% { transform: translate(20px,-15px); } }
+    @keyframes floatB { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-18px,12px); } }
+    @keyframes pulse { 0%,100% { opacity: 1; box-shadow: 0 0 10px var(--accent); } 50% { opacity: 0.5; box-shadow: 0 0 4px var(--accent); } }
+    @keyframes arrowPulse { 0%,100% { transform: translateY(0); opacity: 1; } 50% { transform: translateY(3px); opacity: 0.7; } }
+
+    @media (max-width: 820px) {
+      .header { flex-direction: column; }
+      .rate-box { width: 100%; min-width: 0; }
+      .tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 560px) {
+      .page { padding: 12px; }
+      .card { padding: 18px; border-radius: 22px; }
+      .tabs { grid-template-columns: 1fr 1fr; }
+      .input-wrap { grid-template-columns: 54px 1fr 48px; }
+      .currency-prefix { min-height: 58px; }
+      .amount-input { min-height: 58px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useMemo, useState, useEffect, useRef, useCallback } = React;
+    const DEFAULT_RATE = 271;
+
+    const MODES = {
+      EUR_TO_DZD: {
+        key: 'EUR_TO_DZD', label: '€ → DZD',
+        sourceSymbol: '€', sourceUnit: '€', resultUnit: 'DA',
+        sourceDecimals: 2, resultDecimals: 2,
+        quickValues: [10, 20, 50, 100, 200, 500],
+        convert: (v, r) => v * r,
+        formula: (v, r, res, fmt) => `${fmt(v,2)} € × ${fmt(r,2)} = ${fmt(res,2)} DA`
+      },
+      DZD_TO_EUR: {
+        key: 'DZD_TO_EUR', label: 'DZD → €',
+        sourceSymbol: 'DA', sourceUnit: 'DA', resultUnit: '€',
+        sourceDecimals: 2, resultDecimals: 4,
+        quickValues: [1000, 2000, 5000, 10000, 20000, 50000],
+        convert: (v, r) => v / r,
+        formula: (v, r, res, fmt) => `${fmt(v,2)} DA ÷ ${fmt(r,2)} = ${fmt(res,4)} €`
+      },
+      CENTIMES_TO_EUR: {
+        key: 'CENTIMES_TO_EUR', label: 'Centimes → €',
+        sourceSymbol: 'c', sourceUnit: 'centimes DA', resultUnit: '€',
+        sourceDecimals: 0, resultDecimals: 6,
+        quickValues: [100, 500, 1000, 5000, 10000, 50000],
+        convert: (v, r) => (v / 100) / r,
+        formula: (v, r, res, fmt) => `(${fmt(v,0)} ÷ 100) ÷ ${fmt(r,2)} = ${fmt(res,6)} €`
+      },
+      EUR_TO_CENTIMES: {
+        key: 'EUR_TO_CENTIMES', label: '€ → Centimes',
+        sourceSymbol: '€', sourceUnit: '€', resultUnit: 'centimes DA',
+        sourceDecimals: 2, resultDecimals: 0,
+        quickValues: [1, 5, 10, 20, 50, 100],
+        convert: (v, r) => Math.round(v * r * 100),
+        formula: (v, r, res, fmt) => `${fmt(v,2)} € × ${fmt(r,2)} × 100 = ${fmt(res,0)} centimes`
+      }
+    };
+
+    const fmt = (value, decimals) => {
+      if (!Number.isFinite(value)) return '0';
+      return value.toLocaleString('fr-FR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    };
+
+    const fmtInput = (raw, decimalsAllowed) => {
+      if (!raw) return '';
+      const cleaned = raw.replace(/\s/g, '').replace(/,/g, '.').replace(/[^\d.]/g, '');
+      const parts = cleaned.split('.');
+      const integerPart = parts[0] || '0';
+      const decimalPart = parts.slice(1).join('').slice(0, decimalsAllowed);
+      const intFormatted = Number(integerPart || '0').toLocaleString('fr-FR');
+      if (cleaned.endsWith('.') && decimalsAllowed > 0) return `${intFormatted},`;
+      if (decimalPart.length > 0 && decimalsAllowed > 0) return `${intFormatted},${decimalPart}`;
+      return intFormatted === '0' && !/[1-9]/.test(integerPart) && raw.trim() !== '0' ? '' : intFormatted;
+    };
+
+    const parseNum = (value) => {
+      if (!value) return 0;
+      const n = Number(value.replace(/\s/g, '').replace(/,/g, '.'));
+      return Number.isFinite(n) ? n : 0;
+    };
+
+    function App() {
+      const [modeKey, setModeKey] = useState('EUR_TO_DZD');
+      const [rate, setRate] = useState(DEFAULT_RATE);
+      const [rateDraft, setRateDraft] = useState(String(DEFAULT_RATE).replace('.', ','));
+      const [editingRate, setEditingRate] = useState(false);
+      const [amountInput, setAmountInput] = useState('100');
+      const [history, setHistory] = useState([]);
+      const [copied, setCopied] = useState(false);
+      const [toast, setToast] = useState({ show: false, msg: '' });
+      const inputRef = useRef(null);
+      const rateInputRef = useRef(null);
+      const toastTimer = useRef(null);
+
+      const mode = MODES[modeKey];
+      const amount = parseNum(amountInput);
+      const result = useMemo(() => mode.convert(amount, rate), [amount, mode, rate]);
+      const purchaseRate = rate * 0.985;
+      const sellRate = rate * 1.015;
+      const centimeEuro = 0.01 / rate;
+
+      useEffect(() => { inputRef.current?.focus(); }, [modeKey]);
+      useEffect(() => { if (editingRate) rateInputRef.current?.focus(); }, [editingRate]);
+
+      const showToast = (msg) => {
+        clearTimeout(toastTimer.current);
+        setToast({ show: true, msg });
+        toastTimer.current = setTimeout(() => setToast(t => ({ ...t, show: false })), 2200);
+      };
+
+      const copyResult = useCallback(() => {
+        const text = `${fmt(result, mode.resultDecimals)} ${mode.resultUnit}`;
+        navigator.clipboard?.writeText(text).catch(() => {});
+        setCopied(true);
+        showToast(`Copié : ${text}`);
+        setTimeout(() => setCopied(false), 1800);
+      }, [result, mode]);
+
+      const addHistory = useCallback(() => {
+        if (!amount || !result) return;
+        const entry = {
+          id: Date.now(),
+          mode: mode.label,
+          from: `${fmt(amount, mode.sourceDecimals)} ${mode.sourceUnit}`,
+          to: `${fmt(result, mode.resultDecimals)} ${mode.resultUnit}`,
+          time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+        };
+        setHistory(h => [entry, ...h].slice(0, 12));
+        showToast('Ajouté à l\'historique');
+      }, [amount, result, mode]);
+
+      const copyHistoryItem = (item, e) => {
+        e.stopPropagation();
+        navigator.clipboard?.writeText(`${item.from} = ${item.to}`).catch(() => {});
+        showToast('Copié !');
+      };
+
+      const submitRate = () => {
+        const parsed = parseNum(rateDraft);
+        if (parsed > 0) { setRate(parsed); setEditingRate(false); }
+      };
+
+      const resetRate = () => {
+        setRate(DEFAULT_RATE);
+        setRateDraft(String(DEFAULT_RATE).replace('.', ','));
+        setEditingRate(false);
+      };
+
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+
+      return (
+        <div className="page">
+          <div className="blob blob-a" aria-hidden />
+          <div className="blob blob-b" aria-hidden />
+          <div className="blob blob-c" aria-hidden />
+
+          <div className="layout">
+            {/* MAIN CARD */}
+            <main className="card">
+              <div className="header">
+                <div>
+                  <div className="logo">
+                    <div className="logo-dot" />
+                    EUR / DZD · {dateStr}
+                  </div>
+                  <h1>Convertisseur Euro ↔ Dinar</h1>
+                  <p className="sub">Quatre modes · Taux modifiable · Formules détaillées</p>
+                </div>
+
+                <section className="rate-box" aria-label="Taux de change">
+                  <div className="rate-label">Taux de change</div>
+                  {!editingRate ? (
+                    <div className="rate-display">
+                      <button className="rate-button" onClick={() => { setRateDraft(fmt(rate, 2)); setEditingRate(true); }} title="Modifier">
+                        1 € = {fmt(rate, 2)} DZD
+                      </button>
+                      <button className="icon-btn" onClick={resetRate} title="Réinitialiser">↺</button>
+                    </div>
+                  ) : (
+                    <div className="rate-editor">
+                      <input ref={rateInputRef} className="rate-input" value={rateDraft}
+                        onChange={e => setRateDraft(fmtInput(e.target.value, 4))}
+                        onKeyDown={e => { if (e.key === 'Enter') submitRate(); if (e.key === 'Escape') setEditingRate(false); }}
+                        aria-label="Taux personnalisé" />
+                      <button className="icon-btn confirm" onClick={submitRate}>✓</button>
+                      <button className="icon-btn" onClick={resetRate}>↺</button>
+                    </div>
+                  )}
+                </section>
+              </div>
+
+              {/* TABS */}
+              <div className="tabs" role="tablist">
+                {Object.values(MODES).map(m => (
+                  <button key={m.key} className={`tab ${m.key === modeKey ? 'active' : ''}`}
+                    onClick={() => setModeKey(m.key)} role="tab" aria-selected={m.key === modeKey}>
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+
+              {(modeKey === 'CENTIMES_TO_EUR' || modeKey === 'EUR_TO_CENTIMES') && (
+                <div className="banner">Mode centimes actif · 1 centime = 0,01 DA · Conversion adaptée automatiquement.</div>
+              )}
+
+              {/* INPUT */}
+              <div className="input-wrap">
+                <div className="currency-prefix">{mode.sourceSymbol}</div>
+                <input ref={inputRef} className="amount-input" inputMode="decimal"
+                  value={amountInput} placeholder="0"
+                  onChange={e => setAmountInput(fmtInput(e.target.value, mode.sourceDecimals))}
+                  aria-label={`Montant en ${mode.sourceUnit}`} />
+                <button className="clear-input-btn" onClick={() => { setAmountInput(''); inputRef.current?.focus(); }} title="Effacer">×</button>
+              </div>
+
+              {/* QUICK VALUES */}
+              <div className="quick-list">
+                {mode.quickValues.map(v => (
+                  <button key={v} className="quick-btn" onClick={() => { setAmountInput(fmt(v, mode.sourceDecimals)); inputRef.current?.focus(); }}>
+                    {fmt(v, mode.sourceDecimals)} {mode.sourceUnit}
+                  </button>
+                ))}
+              </div>
+
+              {/* ARROW */}
+              <div className="conversion-arrow" aria-hidden>↓</div>
+
+              {/* RESULT */}
+              <section className="result-box" aria-live="polite">
+                <div className="result-header">
+                  <div className="result-label">Résultat</div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="copy-btn" onClick={addHistory} title="Sauvegarder">
+                      <span>＋</span> Historique
+                    </button>
+                    <button className={`copy-btn ${copied ? 'copied' : ''}`} onClick={copyResult} title="Copier">
+                      {copied ? '✓ Copié' : '⎘ Copier'}
+                    </button>
+                  </div>
+                </div>
+                <div className="result-value">
+                  <span className="result-number">{fmt(result, mode.resultDecimals)}</span>
+                  <span className="result-unit">{mode.resultUnit}</span>
+                </div>
+                <div className="formula">{mode.formula(amount, rate, result, fmt)}</div>
+              </section>
+
+              {/* RATES TABLE */}
+              <section className="rates-table" aria-label="Tableau des taux">
+                <table>
+                  <thead>
+                    <tr><th>Type</th><th>Taux</th><th>Détail</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><span className="badge badge-buy">Achat</span></td>
+                      <td>1 € = {fmt(purchaseRate, 2)} DZD</td>
+                      <td style={{color:'var(--muted)'}}>× 0,985</td>
+                    </tr>
+                    <tr>
+                      <td><span className="badge badge-mid">Moyen</span></td>
+                      <td>1 € = {fmt(rate, 2)} DZD</td>
+                      <td style={{color:'var(--muted)'}}>Taux actuel</td>
+                    </tr>
+                    <tr>
+                      <td><span className="badge badge-sell">Vente</span></td>
+                      <td>1 € = {fmt(sellRate, 2)} DZD</td>
+                      <td style={{color:'var(--muted)'}}>× 1,015</td>
+                    </tr>
+                    <tr>
+                      <td><span className="badge badge-info">1 c DA</span></td>
+                      <td>{fmt(centimeEuro, 6)} €</td>
+                      <td style={{color:'var(--muted)'}}>0,01 DA ÷ taux</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </section>
+
+              <p className="footer-note">※ Taux indicatifs · Non contractuels · Cliquez sur le taux pour le modifier</p>
+            </main>
+
+            {/* SIDE PANEL */}
+            <aside className="card-side">
+              {/* STATS */}
+              <div>
+                <div className="side-title" style={{marginBottom:12}}>Stats rapides</div>
+                <div className="stat-grid">
+                  <div className="stat-card">
+                    <div className="stat-label">Taux actuel</div>
+                    <div className="stat-value gold">{fmt(rate, 2)}</div>
+                  </div>
+                  <div className="stat-card">
+                    <div className="stat-label">Résultat</div>
+                    <div className="stat-value green">{fmt(result, mode.resultDecimals)}</div>
+                  </div>
+                  <div className="stat-card">
+                    <div className="stat-label">Achat</div>
+                    <div className="stat-value">{fmt(purchaseRate, 2)}</div>
+                  </div>
+                  <div className="stat-card">
+                    <div className="stat-label">Vente</div>
+                    <div className="stat-value">{fmt(sellRate, 2)}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* HISTORY */}
+              <div>
+                <div className="side-title">
+                  Historique
+                  {history.length > 0 && (
+                    <button className="history-clear" onClick={() => setHistory([])}>Effacer</button>
+                  )}
+                </div>
+                <div className="history-list" style={{marginTop:10}}>
+                  {history.length === 0 ? (
+                    <div className="history-empty">Cliquez sur <strong>+ Historique</strong><br />pour sauvegarder une conversion</div>
+                  ) : history.map(item => (
+                    <div key={item.id} className="history-item">
+                      <div className="history-mode">{item.mode}</div>
+                      <div className="history-conversion">{item.from} = {item.to}</div>
+                      <div className="history-time">{item.time}</div>
+                      <button className="history-copy" onClick={e => copyHistoryItem(item, e)} title="Copier">⎘</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </aside>
+          </div>
+
+          {/* TOAST */}
+          <div className={`toast ${toast.show ? 'show' : ''}`} role="status" aria-live="polite">
+            <div className="toast-dot" />
+            {toast.msg}
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
